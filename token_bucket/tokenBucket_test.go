@@ -13,6 +13,8 @@ func TestTokenBucket(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	tokenBucket := token_bucket.New(ctx, cancelFunc, 10000)
+	defer tokenBucket.Close()
+
 	timer := time.NewTimer(time.Second)
 	for i := 0; i < 10000; i++ {
 		select {
@@ -31,6 +33,8 @@ func TestTokenBucketFail(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	tokenBucket := token_bucket.New(ctx, cancelFunc, 10000)
+	defer tokenBucket.Close()
+
 	timer := time.NewTimer(time.Second)
 
 	for i := 0; i < 10001; i++ {

@@ -26,9 +26,14 @@ type TokenBucket struct {
 func (r *TokenBucket) addTokens() {
 
 	tk := time.NewTicker(time.Second / time.Duration(r.Qps))
+	defer tk.Stop()
+
 	for {
 		select {
 		case <-tk.C:
+			if r.tokens >= r.Qps {
+				continue
+			}
 			atomic.AddUint64(&r.tokens, 1)
 		case <-r.ctx.Done():
 			return
