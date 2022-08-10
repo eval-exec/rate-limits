@@ -1,61 +1,38 @@
-package leaky_bucket
+package leaky_bucket_test
 
 import (
 	"context"
-	"reflect"
+	"github.com/eval-exec/rate-limits/leaky_bucket"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestLeakyBucket_Request(t *testing.T) {
-	type fields struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		Qps    uint64
-		tokens uint64
-		hole   chan struct {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	qpsLimit := uint64(10000)
+	leakyBucket := leaky_bucket.New(ctx, cancelFunc, qpsLimit)
+	defer leakyBucket.Close()
+
+	{
+		now := time.Now()
+		leakyBucket.Request()
+		t.Log(time.Since(now))
+	}
+
+	allReqCount, reqOkCount := uint64(0), uint64(0)
+
+	now := time.Now()
+	for time.Since(now) <= time.Second {
+		allReqCount++
+		if leakyBucket.Request() {
+			atomic.AddUint64(&reqOkCount, 1)
 		}
 	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := &LeakyBucket{
-				ctx:    tt.fields.ctx,
-				cancel: tt.fields.cancel,
-				Qps:    tt.fields.Qps,
-				tokens: tt.fields.tokens,
-				hole:   tt.fields.hole,
-			}
-			if got := l.Request(); got != tt.want {
-				t.Errorf("Request() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
-func TestNew(t *testing.T) {
-	type args struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		qps    uint64
+	if reqOkCount > qpsLimit {
+		t.Errorf("request success count is %d/%d, but qps limit is %d", reqOkCount, allReqCount, qpsLimit)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *LeakyBucket
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.ctx, tt.args.cancel, tt.args.qps); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("New() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	t.Logf("request ok count: %d/%d, qps limit: %d", reqOkCount, allReqCount, qpsLimit)
+
 }
