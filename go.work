@@ -1,0 +1,6 @@
+go 1.18
+
+use (
+	./leaky_bucket
+	./token_bucket
+)
