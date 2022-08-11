@@ -7,13 +7,16 @@ import (
 )
 
 func New(ctx context.Context, cancel context.CancelFunc, qps uint64) *TokenBucket {
-	return &TokenBucket{
+	t := &TokenBucket{
 		ctx:    ctx,
 		cancel: cancel,
 		Qps:    qps,
-		tokens: qps,
+		tokens: 0,
 	}
 
+	go t.addTokens()
+
+	return t
 }
 
 type TokenBucket struct {
